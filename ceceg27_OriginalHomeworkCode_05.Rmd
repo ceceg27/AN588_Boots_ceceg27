@@ -1,0 +1,77 @@
+---
+title: "Boots_ceceg27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+[1] Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your β oeffiecients (slope and intercept).
+
+### First we need to load in the data 
+```{r}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN588_Fall21/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+### Looks good, now lets get the data ready to work with 
+```{r}
+hr<-e$HomeRange_km2
+bmf<-e$Body_mass_female_mean #shorten the variable names (just makes things easier)
+```
+### Preforming the linear regression, making sure to log each variable, and reporting the values
+```{r}
+reg <- lm(log(hr) ~ log(bmf), data = d, na.action=na.exclude) #removing nas just in case
+reg 
+plot(reg) #normal looking qq plot
+#Intercept (B0) is -9.75, slope (B1) is 1.087 (I think I'm reading the output right but these two values could be reversed)
+```
+### Finding the confidence intervals
+```{r}
+confint(reg, level =.95)
+#Intervals are: -13.41 and -6.09 for intercept; .67 and 1.5 for long(bmf)
+```
+
+[2] Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the same coefficients. This generates a sampling distribution for each β coefficient.
+
+### first I'll make the bootstrap 
+```{r}
+library(boot)
+?boot()
+#I think boot will work, but I'll need to make a function first
+bootstrap <-function(data, indicies) {
+  line <-lm(data =d, log(hr) ~ log(bmf))
+  d <- data [indicies, ]
+  return (coef(line))
+}
+
+result <- boot(d, statistic=bootstrap, R=1000)
+result
+# getting t1 = -9.75 and t2 = 1.087, the same numbers as above, so the SE is the same for both the regression and the bootstrap!
+```
+
+
+```{r}
+?boot.ci() #this works with the boot command 
+
+boot.ci(boot.out=result, type = "norm")
+#it doesn't seem like this is working, I get an answer of -9.75 and -9.75 which just doesn't feel right
+#Now that I'm thinking about it this could be right, each T1 value is -9.75 in the 1000 samples, so it makes sense that the confidence interval would be super small or basically nonexistant 
+```
+
+How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+
+## The standard errors seem to be the same for both the lm and the bootstrap: t1 or B0 = -9.75, and t2 or b1 = 1.087
+
+How does the latter compare to the 95% CI estimated from your entire dataset?
+
+## For B0, the confidence interval is smaller than that of the lm. I haven't been able to figure out how to get the CI for B1 using bootstrap. I need to look further into it. 
+
+Challenges 
+1. I am not 100% confident in my bootstrap, particularly the confidence interval bit. 
+2. I haven't been able to get a CI value for B1 for the bootstrap. 
+3. I don't even know where to begin with the extra credit. I will try it out if I have time this week.  
+
+
