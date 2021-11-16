@@ -1,0 +1,128 @@
+---
+title: "Boots_ceceg27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+[1] Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your β oeffiecients (slope and intercept).
+
+### First we need to load in the data 
+```{r}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN588_Fall21/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+### Looks good, now lets get the data ready to work with 
+```{r}
+hr<-e$HomeRange_km2
+bmf<-e$Body_mass_female_mean #shorten the variable names (just makes things easier)
+```
+### Preforming the linear regression, making sure to log each variable, and reporting the values
+```{r}
+reg <- lm(log(hr) ~ log(bmf), data = d, na.action=na.exclude) #removing nas just in case
+reg 
+plot(reg) #normal looking qq plot
+#Intercept (B0) is -9.75, slope (B1) is 1.087 (I think I'm reading the output right but these two values could be reversed)
+```
+### Finding the confidence intervals
+```{r}
+confint(reg, level =.95)
+#Intervals are: -13.41 and -6.09 for intercept; .67 and 1.5 for long(bmf)
+```
+
+[2] Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the same coefficients. This generates a sampling distribution for each β coefficient.
+
+### first I'll make the bootstrap 
+```{r}
+library(boot)
+?boot()
+#I think boot will work, but I'll need to make a function first
+bootstrap <-function(data, indicies) {
+  line <-lm(data =d, log(hr) ~ log(bmf))
+  d <- data [indicies, ]
+  return (coef(line))
+}
+
+result <- boot(d, statistic=bootstrap, R=1000)
+result
+# getting t1 = -9.75 and t2 = 1.087, the same numbers as above, so the SE is the same for both the regression and the bootstrap
+# the standard error here is also 0
+```
+
+
+```{r}
+?boot.ci() #this works with the boot command 
+
+ci2 <- boot.ci(boot.out = result, conf = 0.95, type = 'norm', index = 1)
+ci2
+ci3 <- boot.ci(boot.out = result, conf = 0.95, type = 'norm', index = 2)
+ci3
+#I am getting a value of -9.75 for t1 and 1.086 for t2. I think this makes sense 
+```
+
+How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+
+## The standard errors seem to be the same for both the lm and the bootstrap: t1 or B0 = -9.75, and t2 or b1 = 1.087
+
+How does the latter compare to the 95% CI estimated from your entire dataset?
+
+## For B0 and B1 the confidence interval is smaller than that of the lm. So I would say that the bootstrapped model is more accurate 
+
+Challenges 
+1. I am not 100% confident in my bootstrap, particularly the confidence interval bit. 
+2. I haven't been able to get a CI value for B1 for the bootstrap. 
+3. I don't even know where to begin with the extra credit. I will try it out if I have time this week.  
+#edit: I feel a bit more confident after seeing how one of my peer commentary partner's did their confidence intervals. I do think its kinda weird that my CIs for the bootstrap are basically nonexistant (same value as B0 and B1). But in general my values are pretty close to those I've seen. I think using the function "na.action = na.exclude" at the beginning is making my numbers like 1 decimal point off butttt I think that's fine. 
+
+#extra credit
+Write a FUNCTION that takes as its arguments a dataframe, “d”, a linear model, “m” (as a character string, e.g., “logHR~logBM”), a user-defined confidence interval level, “conf.level” (with default = 0.95), and a number of bootstrap replicates, “n” (with default = 1000). Your function should return a dataframe that includes: beta coefficient names; beta coefficients, standard errors, and upper and lower CI limits for the linear model based on your entire dataset; and mean beta coefficient estimates, SEs, and CI limits for those coefficients based on your bootstrap.
+
+```{r}
+extracredit <- function(d, reg, conf.level = 0.95, n = 1000, size = 50) { #set up the parameters
+
+  model <- lm(formula = reg, data = d, na.action = na.omit) #run the linear reg
+
+  
+  #this is where idk what to do haha. I think we need to generate a data frame with the coefs and cis
+  
+Coefs <- as.data.frame(coef(summary(model)))
+
+ CIs <- as.data.frame(confint(model, level = .95))
+
+  combo <- cbind(t,c)
+  
+  #running the bootstrap, I basically copied my one above
+  
+  library(boot)
+bootstrap <-function(data, indicies) {
+  line <-lm(data =d, log(hr) ~ log(bmf))
+  d <- data [indicies, ]
+  return (coef(line))
+}
+result <- boot(d, statistic=bootstrap, R=1000) #this should return B0 and B1
+
+Confit.int.t1 <- boot.ci(boot.out = result, conf = 0.95, type = 'norm', index = 1)
+
+Confit.int.t2 <- boot.ci(boot.out = result, conf = 0.95, type = 'norm', index = 2)
+
+ #ok now we need to make the output
+g <- t(data.frame(result, c(Confit.int.t1, Confit.int.t2)))
+return <- cbind(g,return)
+rownames(return) <- c('Intercept', 'Slope')
+
+  
+return <- return[, c(5,6,7,8,9,10,1,2,3,4)]
+return
+}
+```
+
+```{r}
+r <- extracredit(d = d, reg = log(hr) ~ log(bmf)) 
+r
+```
+
+#well it's not working but also I have no idea what I'm doing so I think I'm gonna take a break from this and circle back if I have time/mental willpower
