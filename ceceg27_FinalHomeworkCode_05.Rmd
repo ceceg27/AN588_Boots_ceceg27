@@ -21,6 +21,8 @@ head(d)
 hr<-e$HomeRange_km2
 bmf<-e$Body_mass_female_mean #shorten the variable names (just makes things easier)
 ```
+*hmm not sure where e came from*
+
 ### Preforming the linear regression, making sure to log each variable, and reporting the values
 ```{r}
 reg <- lm(log(hr) ~ log(bmf), data = d, na.action=na.exclude) #removing nas just in case
@@ -52,7 +54,7 @@ result
 # getting t1 = -9.75 and t2 = 1.087, the same numbers as above, so the SE is the same for both the regression and the bootstrap
 # the standard error here is also 0
 ```
-
+*I'm not sure that it is repeating the formula if you aren't specifying it in your function (i.e. bootstrap <-function(formula, data, indicies))*
 
 ```{r}
 ?boot.ci() #this works with the boot command 
@@ -124,5 +126,7 @@ return
 r <- extracredit(d = d, reg = log(hr) ~ log(bmf)) 
 r
 ```
+
+*boot() won't turn the results into a dataframe, you need to first make empty (null) objects to put the coefficients into*
 
 #well it's not working but also I have no idea what I'm doing so I think I'm gonna take a break from this and circle back if I have time/mental willpower
